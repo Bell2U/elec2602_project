@@ -13,7 +13,7 @@ some more states to be added
 ### block diagram
 ![control circuit block diagram](control_circuit/control_circuit_diagram.jpg)
 
-### I/O explaination
+### I/O explaination (undone)
 - input
   - instruction
   - clk
