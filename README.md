@@ -30,5 +30,13 @@ some more states to be added
   - ALU_mode
 
 ## ALU
+### block diagram
+### I/O explaination
 
 ## register and Tri-state Vector
+### block diagram
+### I/O explaination
+
+## memory (下节课之前不需要完成这个，先把前边的做了)
+
+## Combine all these stuff together.
