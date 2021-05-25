@@ -41,13 +41,13 @@ endmodule
 
 
 module AUL(a, b, addsub, clk, ain, gin, gout, ALUout);
-	parameter N = 8;
+	parameter N = 8;	// N is the number of bits this ALU deal with
    input [N-1:0] a, b;
    input addsub, clk, ain, gin, gout;
 	output [N-1:0] ALUout;
    wire [N-1:0] inverted_b, bout, sum, aout, GQ;
 
-	genral_purpose_reg #(.D_width(N)) A(a, clk, ain, aout);
+	genral_purpose_reg #(.D_width(N)) A(a, clk, ain, aout);	// verilog parameter reference: https://www.chipverify.com/verilog/verilog-parameters
    nbits_fulladder #(.N(N)) nfa(aout, bout, addsub, c_out, sum);
    genral_purpose_reg #(.D_width(N)) G(sum, clk, gin, GQ);
    tri_buf #(.a_width(N)) G_tb(GQ, ALUout, gout);
