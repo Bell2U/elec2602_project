@@ -31,6 +31,10 @@ some more states to be added
 
 ## ALU
 ### block diagram
+AddSub
+![ALU_AddSub](ALU_AddSub.jpg)
+Datapath
+![ALU_Datapath](ALU_Datapath.jpg)
 ### I/O explaination
 
 ## register and Tri-state Vector
