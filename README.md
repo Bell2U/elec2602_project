@@ -40,6 +40,10 @@ Datapath
 ### I/O explaination
 
 ## register and Tri-state Vector
+register
+
+Tri-state Vector
+![Tri-state Vector](tristate_buffer.jpg)
 ### block diagram
 ### I/O explaination
 
