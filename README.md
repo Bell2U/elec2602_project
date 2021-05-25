@@ -32,10 +32,10 @@ some more states to be added
 ## ALU
 ### block diagram
 AddSub
-![AddSub](ALU_AddSub.jpg) 
+![AddSub](ALU/ALU_AddSub.jpg) 
 
 Datapath
-![ALU_Datapath](ALU_Datapath.jpg)
+![ALU_Datapath](ALU/ALU_Datapath.jpg)
 
 ### I/O explaination
 
