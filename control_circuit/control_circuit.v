@@ -1,6 +1,6 @@
 // States
 `define initial_state 4'b0000
-`define Load 4'b0001
+`define Load1 4'b0001
 `define Move 4'b0010
 `define Add1 4'b0011
 `define Add2 4'b0100
@@ -8,6 +8,7 @@
 `define Sub1 4'b0110
 `define Sub2 4'b0111
 `define Sub3 4'b1000
+`define Load2 4'b1001
 
 // instructions
 `define load 3'b000
@@ -20,7 +21,6 @@
 `define state_size 4
 `define operand_size 8
 
-
 module Next_state(instruction, curr, next);
 	input [`instruction_size-1:0] instruction;
 	input [`state_size-1:0] curr;
@@ -30,8 +30,9 @@ module Next_state(instruction, curr, next);
 	always @(instruction, curr) begin
 		casex({curr, instruction})
 		// load
-		{`initial_state, `load}: next = `Load;
-		{`Load, {`instruction_size{1'b?}}}: next = `initial_state;	// Replication Operator: https://www.nandland.com/verilog/examples/example-replication-operator.html
+		{`initial_state, `load}: next = `Load1;
+		{`Load1, {`instruction_size{1'b?}}}: next = `Load2;	// Replication Operator: https://www.nandland.com/verilog/examples/example-replication-operator.html
+		{`Load2, {`instruction_size{1'b?}}}: next = `initial_state;
 		
 		// mov
 		{`initial_state, `mov}: next = `Move;
@@ -69,29 +70,45 @@ module current_state_register(next, clk, reset, curr);
 endmodule
 
 
+module last_state_output_register #(parameter num_of_reg = 4) (curr_Rinout, clk, reset, last_Rinout);
+	input [num_of_reg-1:0] curr_Rinout;
+	input clk, reset;
+	output reg [num_of_reg-1:0] last_Rinout;
+	
+	always @(posedge clk) begin
+		if (reset)
+			last_Rinout <= {num_of_reg{1'b0}};
+		else
+			last_Rinout <= curr_Rinout;
+	end
+endmodule
+
+
 module output_control_signal
+	#(parameter num_of_reg = 4)
 	(input [`operand_size-1 : 0] operand,
 	 input [`state_size-1:0] curr,
-	 output reg [3:0] Rin, Rout,
-	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_data, ALU_mode);
+	 input [num_of_reg-1:0] last_Rxinout, last_Ryinout,
+	 output reg [num_of_reg-1:0] Rin, Rout,
+	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode,
+	 output reg [num_of_reg-1:0] Rxinout, Ryinout);
 	/* 
 	Number of registers: 4
-	Number of bits to encode registers: 3
+	Number of bits to encode registers: 4
 	ALU_mode:
 		0 add
 		1 sub
 	*/
 	
-	localparam reg_encoding_bits = 3;
-	localparam r1 = 'b001, r2 = 'b010, r3 = 'b011, r4 = 'b100;
+	localparam reg_encoding_bits = 4;
+	localparam r1 = 'b0001, r2 = 'b0010, r3 = 'b0011, r4 = 'b0100;
 	
 	wire [reg_encoding_bits-1:0] op1, op2;
-	// wire [`operand_size - reg_encoding_bits-1:0] load_D;
-	reg [3:0] Rxinout, Ryinout;
+	reg curr_or_last_Rinout;
+	
 	
 	assign op1 = operand[`operand_size-1:`operand_size - reg_encoding_bits];
 	assign op2 = operand[`operand_size - reg_encoding_bits - 1 : `operand_size - 2*reg_encoding_bits];
-	// assign load_D = operand[`operand_size - reg_encoding_bits - 1 : 0];
 	
 	always @(op1) begin
 		case(op1)
@@ -122,18 +139,29 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		
-		`Load: begin 
-			Rin <= Rxinout;
+		`Load1: begin 
+			Rin <= 'b0000;
 			Rout <= 'b0000; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b1;
-			External_data <= 1'b1;
+			External_load <= 1'b0;
+			ALU_mode <= 1'bx;
+			end
+			
+		`Load2: begin 
+			Rin <= last_Rxinout;
+			Rout <= 'b0000;
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b1;
+			External_load <= 1'b1;
 			ALU_mode <= 1'bx;
 			end
 			
@@ -144,7 +172,7 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b1;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		
@@ -155,7 +183,7 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		
@@ -166,7 +194,7 @@ module output_control_signal
 			ALU_g_in <= 1'b1;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'b0; // add
 			end
 			
@@ -177,7 +205,7 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b1;
 			Done <= 1'b1;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		
@@ -188,7 +216,7 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		
@@ -199,7 +227,7 @@ module output_control_signal
 			ALU_g_in <= 1'b1;
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'b1; // sub
 			end
 			
@@ -210,7 +238,7 @@ module output_control_signal
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b1;
 			Done <= 1'b1;
-			External_data <= 1'b0;
+			External_load <= 1'b0;
 			ALU_mode <= 1'bx;
 			end
 		endcase
@@ -220,29 +248,38 @@ endmodule
 
 
 module control_circuit
+	#(parameter num_of_reg = 4)
 	(input [`instruction_size + `operand_size - 1 : 0] INSTRUCTION,
 	 input clk, reset,
-	 output [3:0] Rin, Rout,
-	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_data, ALU_mode);
+	 output [num_of_reg:0] Rin, Rout,
+	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode);
 	 
 	 wire [`instruction_size-1:0] instruction;
 	 wire [`operand_size-1:0] operand;
 	 wire [`state_size-1:0] current_state, next_state;
+	 wire [num_of_reg-1:0] curr_Rxinout, curr_Ryinout, last_Rxinout, last_Ryinout;
 	 
 	 
 	 assign instruction = INSTRUCTION[`instruction_size + `operand_size - 1 : `operand_size];
 	 assign operand = INSTRUCTION[`operand_size - 1 : 0];
 	 
 	 Next_state NS(instruction, current_state, next_state);
+	 
 	 current_state_register CS(next_state, clk, reset, current_state);
-	 output_control_signal OUT
+	 
+	 last_state_output_register #(.num_of_reg(num_of_reg)) Last_Rxinout(curr_Rxinout, clk, reset, last_Rxinout);
+	 last_state_output_register #(.num_of_reg(num_of_reg)) Last_Ryinout(curr_Ryinout, clk, reset, last_Ryinout);
+	 
+	 output_control_signal #(.num_of_reg(num_of_reg)) OUT
 		(.operand(operand),
 		 .curr(current_state),
+		 .last_Rxinout(last_Rxinout), .last_Ryinout(last_Ryinout),
 		 .Rin(Rin), .Rout(Rout),
 		 .ALU_a_in(ALU_a_in),
 		 .ALU_g_in(ALU_g_in),
 		 .ALU_g_out(ALU_g_out),
 		 .Done(Done),
-		 .External_data(External_data),
-		 .ALU_mode(ALU_mode));
+		 .External_load(External_load),
+		 .ALU_mode(ALU_mode),
+		 .Rxinout(curr_Rxinout), .Ryinout(curr_Ryinout));
 endmodule

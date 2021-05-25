@@ -7,24 +7,23 @@
 `define sub 3'b011
 
 // registers
-`define r1 3'b001
-`define r2 3'b010
-`define r3 3'b011
-`define r4 3'b100
-
+`define r1 4'b0001
+`define r2 4'b0010
+`define r3 4'b0011
+`define r4 4'b0100
 
 module control_circuit_TB;
 	reg clk, reset;
 	reg [10:0] instruction;
 	wire [3:0] Rin, Rout;
-	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_data, ALU_mode;
+	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode;
 	
 	control_circuit CC
 	(.INSTRUCTION(instruction),
 	 .clk(clk), .reset(reset),
 	 .Rin(Rin), .Rout(Rout),
 	 .ALU_a_in(ALU_a_in), .ALU_g_in(ALU_g_in), .ALU_g_out(ALU_g_out),
-	 .Done(Done), .External_data(External_data), .ALU_mode(ALU_mode));
+	 .Done(Done), .External_load(External_load), .ALU_mode(ALU_mode));
 	 
 	 initial begin
 		reset = 1'b0;
@@ -34,13 +33,15 @@ module control_circuit_TB;
 		#10
 		reset = 1'b0;
 		#5
-		instruction = {`load, `r1, 5'b00110};
+		instruction = {`load, `r1, 4'b0110};
 		#50
-		instruction = {`mov, `r1, `r2, 2'b00};
+		instruction = 11'b10101010101;
+		#50
+		instruction = {`mov, `r1, `r2};
 		#100
-		instruction = {`add, `r3, `r4, 2'b00};
+		instruction = {`add, `r3, `r4};
 		#200
-		instruction = {`sub, `r2, `r4, 2'b00};
+		instruction = {`sub, `r2, `r4};
 	 end
 	 
 	 always #25 clk = ~clk;
