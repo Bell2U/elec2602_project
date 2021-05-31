@@ -43,10 +43,19 @@ Datapath
 register
 
 Tri-state Vector
-![Tri-state Vector](tristate_buffer.jpg)
 ### block diagram
+![Tri-state Vector](tristate_buffer.jpg)
 ### I/O explaination
 
 ## memory (下节课之前不需要完成这个，先把前边的做了)
+### block diagram
+Overall
+![memory_overall](program_memory/program_overall.jpg)
+
+Program Memory
+![memory](program_memory/program_memory.jpg)
+
+Program Counter
+![memory_counter](program_memory/program_counter.jpg)
 
 ## Combine all these stuff together.
