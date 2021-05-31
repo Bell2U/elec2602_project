@@ -23,6 +23,7 @@
 `define mov 3'b001
 `define add 3'b010
 `define sub 3'b011
+`define Xor 3'b100
 
 `define INSTRUCTION_size 11
 `define reg_width 16
@@ -46,10 +47,11 @@ module my_chip_TB;
 		INSTRUCTION = 16'b0000_0000_0000_0111;		  			 #50
 		INSTRUCTION = {padding_bits, `load, `r2, 4'b0110};  #100
 		INSTRUCTION = 16'b0000_0000_0000_1000;		  			 #50
-		INSTRUCTION = {padding_bits, `mov, `r3, `r2};		  #100
-		INSTRUCTION = {padding_bits, `add, `r3, `r1};		  #200
-		INSTRUCTION = {padding_bits, `sub, `r1, `r2};		  #200
-		INSTRUCTION = {padding_bits, `mov, `r4, `r1};
+		INSTRUCTION = {padding_bits, `mov, `r3, `r2};		 #100
+		INSTRUCTION = {padding_bits, `add, `r3, `r1};		 #200
+		INSTRUCTION = {padding_bits, `sub, `r1, `r2};		 #200
+		INSTRUCTION = {padding_bits, `mov, `r4, `r1};		 #200
+		INSTRUCTION = {padding_bits, `Xor, `r1, `r2};
 	 end
 	 
 	 always #25 clk = ~clk;

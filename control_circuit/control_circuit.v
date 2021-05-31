@@ -9,17 +9,22 @@
 `define Sub2 4'b0111
 `define Sub3 4'b1000
 `define Load2 4'b1001
+`define Xor1 4'b1010
+`define Xor2 4'b1011
+`define Xor3 4'b1100
 
 // instructions
 `define load 3'b000
 `define mov 3'b001
 `define add 3'b010
 `define sub 3'b011
+`define Xor 3'b100
 
 //size
 `define instruction_size 3
 `define state_size 4
 `define operand_size 8
+`define ALU_mode_size 2
 
 module Next_state(instruction, curr, next);
 	input [`instruction_size-1:0] instruction;
@@ -50,6 +55,11 @@ module Next_state(instruction, curr, next);
 		{`Sub2, {`instruction_size{1'b?}}}: next = `Sub3;
 		{`Sub3, {`instruction_size{1'b?}}}: next = `initial_state;
 		
+		// xor
+		{`initial_state, `Xor}: next = `Xor1;
+		{`Xor1, {`instruction_size{1'b?}}}: next = `Xor2;
+		{`Xor2, {`instruction_size{1'b?}}}: next = `Xor3;
+		{`Xor3, {`instruction_size{1'b?}}}: next = `initial_state;
 		default: next = `initial_state;
 		endcase
 	end
@@ -70,7 +80,7 @@ module current_state_register(next, clk, reset, curr);
 endmodule
 
 
-module last_state_output_register #(parameter num_of_reg = 8) (curr_Rinout, clk, reset, last_Rinout);
+module last_state_output_register #(parameter num_of_reg = 16) (curr_Rinout, clk, reset, last_Rinout);
 	input [num_of_reg-1:0] curr_Rinout;
 	input clk, reset;
 	output reg [num_of_reg-1:0] last_Rinout;
@@ -90,14 +100,16 @@ module output_control_signal
 	 input [`state_size-1:0] curr,
 	 input [num_of_reg-1:0] last_Rxinout, last_Ryinout,
 	 output reg [num_of_reg-1:0] Rin, Rout,
-	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode,
+	 output reg [`ALU_mode_size-1:0] ALU_mode,
+	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load,
 	 output reg [num_of_reg-1:0] Rxinout, Ryinout);
 	/* 
 	Number of registers: 16
 	Number of bits to encode registers: 4
 	ALU_mode:
-		0 add
-		1 sub
+		00 add
+		01 sub
+		10 xor
 	*/
 	
 	localparam reg_encoding_bits = 4;
@@ -107,7 +119,6 @@ module output_control_signal
 				  r12 = 'b1100, r13 = 'b1101, r14 = 'b1110, r15 = 'b1111;
 				  
 	wire [reg_encoding_bits-1:0] op1, op2;
-	reg curr_or_last_Rinout;
 	
 	
 	assign op1 = operand[`operand_size-1:`operand_size - reg_encoding_bits];
@@ -167,7 +178,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 		
 		`Load1: begin 
@@ -178,7 +189,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b1;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 			
 		`Load2: begin 
@@ -189,7 +200,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b1;
 			External_load <= 1'b1;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 			
 		`Move: begin
@@ -200,7 +211,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b1;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 		
 		`Add1: begin
@@ -211,7 +222,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 		
 		`Add2: begin
@@ -222,7 +233,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
 			External_load <= 1'b0;
-			ALU_mode <= 1'b0; // add
+			ALU_mode <= 2'b00; // add
 			end
 			
 		`Add3: begin
@@ -233,7 +244,7 @@ module output_control_signal
 			ALU_g_out <= 1'b1;
 			Done <= 1'b1;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 		
 		`Sub1: begin
@@ -244,7 +255,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
 			end
 		
 		`Sub2: begin
@@ -255,7 +266,7 @@ module output_control_signal
 			ALU_g_out <= 1'b0;
 			Done <= 1'b0;
 			External_load <= 1'b0;
-			ALU_mode <= 1'b1; // sub
+			ALU_mode <= 2'b01; // sub
 			end
 			
 		`Sub3: begin
@@ -266,11 +277,43 @@ module output_control_signal
 			ALU_g_out <= 1'b1;
 			Done <= 1'b1;
 			External_load <= 1'b0;
-			ALU_mode <= 1'bx;
+			ALU_mode <= 2'bxx;
+			end
+		
+		`Xor1: begin
+			Rin <= {num_of_reg{1'b0}}; 
+			Rout <= Rxinout; 
+			ALU_a_in <= 1'b1;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b0;
+			External_load <= 1'b0;
+			ALU_mode <= 2'bxx;
+			end
+		
+		`Xor2: begin
+			Rin <= {num_of_reg{1'b0}}; 
+			Rout <= Ryinout; 
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b1;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b0;
+			External_load <= 1'b0;
+			ALU_mode <= 2'b10; // xor
+			end
+			
+		`Xor3: begin
+			Rin <= Rxinout; 
+			Rout <= {num_of_reg{1'b0}}; 
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b1;
+			Done <= 1'b1;
+			External_load <= 1'b0;
+			ALU_mode <= 2'bxx;
 			end
 		endcase
 	end
-	
 endmodule
 
 
@@ -279,7 +322,8 @@ module control_circuit
 	(input [`instruction_size + `operand_size - 1 : 0] INSTRUCTION,
 	 input clk, reset,
 	 output [num_of_reg-1:0] Rin, Rout,
-	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode);
+	 output [`ALU_mode_size-1:0] ALU_mode,
+	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load);
 	 
 	 wire [`instruction_size-1:0] instruction;
 	 wire [`operand_size-1:0] operand;

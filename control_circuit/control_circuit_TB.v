@@ -5,6 +5,7 @@
 `define mov 3'b001
 `define add 3'b010
 `define sub 3'b011
+`define Xor 3'b100
 
 // registers
 `define r0 4'b0000
@@ -30,7 +31,8 @@ module control_circuit_TB;
 	reg clk, reset;
 	reg [10:0] instruction;
 	wire [num_of_reg-1:0] Rin, Rout;
-	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode;
+	wire [1:0] ALU_mode;
+	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load;
 	
 	control_circuit CC
 	(.INSTRUCTION(instruction),
@@ -52,6 +54,7 @@ module control_circuit_TB;
 		instruction = {`mov, `r1, `r2}; #100
 		instruction = {`add, `r3, `r4}; #200
 		instruction = {`sub, `r2, `r4}; #200
+		instruction = {`Xor, `r0, `r3}; #200
 		instruction = {`mov, `r5, `r6}; #100
 		instruction = {`mov, `r7, `r8}; #100
 		instruction = {`mov, `r0, `r9}; #100

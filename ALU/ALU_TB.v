@@ -1,17 +1,19 @@
 `timescale 1ns/1ps
 
 module ALU_TB;
-	localparam N = 8;
+	localparam N = 16;
 	reg [N-1:0] a, b;
-	reg addsub, clk, ain, gin, gout;
+	reg [1:0] ALU_mode;
+	reg clk, ain, gin, gout;
 	wire [N-1:0] ALUout;
 	
-	AUL #(.N(N)) alu(a, b, addsub, clk, ain, gin, gout, ALUout);
+	AUL #(.N(N)) alu(a, b, ALU_mode, clk, ain, gin, gout, ALUout);
 	
 	initial begin
-		a <= 8'b0000_0010;
-		b <= 8'b0000_0011;
-		{clk, ain, gin, gout, addsub} <= 5'b10000;
+		a <= 16'b0000_0000_0000_0010;
+		b <= 16'b0000_0000_0000_0011;
+		{clk, ain, gin, gout} <= 4'b1000;
+		ALU_mode = 2'b00;	//add
 		
 		#50
 		{ain, gin, gout} <= 3'b100;
@@ -21,7 +23,7 @@ module ALU_TB;
 		{ain, gin, gout} <= 3'b001;
 		
 		#50
-		addsub <= 1'b1;
+		ALU_mode <= 2'b01;	//sub
 		{ain, gin, gout} <= 3'b100;
 		#50
 		{ain, gin, gout} <= 3'b010;
@@ -29,9 +31,9 @@ module ALU_TB;
 		{ain, gin, gout} <= 3'b001;
 		
 		#50
-		a <= 8'b1000_0001;
-		b <= 8'b1000_1111;
-		addsub <= 1'b0;
+		a <= 16'b1010_1010_1000_1111;
+		b <= 16'b0101_0101_1000_1111;
+		ALU_mode <= 2'b10;	//xor
 		{ain, gin, gout} <= 3'b100;
 		#50
 		{ain, gin, gout} <= 3'b010;

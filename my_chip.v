@@ -1,6 +1,7 @@
 `define reg_width 16
 `define INSTRUCTION_size 11
 `define Num_of_reg 16
+`define ALU_mode_size 2
 
 module Reg_plus_tri(in, clk, Rin, Rout, out);
 	input [`reg_width-1:0] in;
@@ -19,7 +20,8 @@ module my_chip
 	 input clk, reset);
 	 
 	wire [`Num_of_reg-1:0] Rin, Rout;
-	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode;
+	wire [`ALU_mode_size-1:0] ALU_mode;
+	wire ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load;
 	wire [`reg_width-1:0] Bus;
 	wire [`INSTRUCTION_size-1:0] INSTRUCTION;
 	 
