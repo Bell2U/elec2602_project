@@ -70,7 +70,7 @@ module current_state_register(next, clk, reset, curr);
 endmodule
 
 
-module last_state_output_register #(parameter num_of_reg = 4) (curr_Rinout, clk, reset, last_Rinout);
+module last_state_output_register #(parameter num_of_reg = 8) (curr_Rinout, clk, reset, last_Rinout);
 	input [num_of_reg-1:0] curr_Rinout;
 	input clk, reset;
 	output reg [num_of_reg-1:0] last_Rinout;
@@ -85,7 +85,7 @@ endmodule
 
 
 module output_control_signal
-	#(parameter num_of_reg = 4)
+	#(parameter num_of_reg = 16)
 	(input [`operand_size-1 : 0] operand,
 	 input [`state_size-1:0] curr,
 	 input [num_of_reg-1:0] last_Rxinout, last_Ryinout,
@@ -93,7 +93,7 @@ module output_control_signal
 	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode,
 	 output reg [num_of_reg-1:0] Rxinout, Ryinout);
 	/* 
-	Number of registers: 4
+	Number of registers: 16
 	Number of bits to encode registers: 4
 	ALU_mode:
 		0 add
@@ -101,8 +101,11 @@ module output_control_signal
 	*/
 	
 	localparam reg_encoding_bits = 4;
-	localparam r1 = 'b0001, r2 = 'b0010, r3 = 'b0011, r4 = 'b0100;
-	
+	localparam r0 = 'b0000,  r1 = 'b0001,  r2 = 'b0010,  r3 = 'b0011,
+				  r4 = 'b0100,  r5 = 'b0101,  r6 = 'b0110,  r7 = 'b0111,
+				  r8 = 'b1000,  r9 = 'b1001,  r10 = 'b1010, r11 = 'b1011,
+				  r12 = 'b1100, r13 = 'b1101, r14 = 'b1110, r15 = 'b1111;
+				  
 	wire [reg_encoding_bits-1:0] op1, op2;
 	reg curr_or_last_Rinout;
 	
@@ -112,29 +115,53 @@ module output_control_signal
 	
 	always @(op1) begin
 		case(op1)
-		r1: Rxinout = 'b0001;
-		r2: Rxinout = 'b0010;
-		r3: Rxinout = 'b0100;
-		r4: Rxinout = 'b1000;
-		default: Rxinout = 'b0000;
+		r0:  Rxinout = 'b0000_0000_0000_0001;
+		r1:  Rxinout = 'b0000_0000_0000_0010;
+		r2:  Rxinout = 'b0000_0000_0000_0100;
+		r3:  Rxinout = 'b0000_0000_0000_1000;
+		r4:  Rxinout = 'b0000_0000_0001_0000;
+		r5:  Rxinout = 'b0000_0000_0010_0000;
+		r6:  Rxinout = 'b0000_0000_0100_0000;
+		r7:  Rxinout = 'b0000_0000_1000_0000;
+		r8:  Rxinout = 'b0000_0001_0000_0000;
+		r9:  Rxinout = 'b0000_0010_0000_0000;
+		r10: Rxinout = 'b0000_0100_0000_0000;
+		r11: Rxinout = 'b0000_1000_0000_0000;
+		r12: Rxinout = 'b0001_0000_0000_0000;
+		r13: Rxinout = 'b0010_0000_0000_0000;
+		r14: Rxinout = 'b0100_0000_0000_0000;
+		r15: Rxinout = 'b1000_0000_0000_0000;
+		default: Rxinout = 'b0000_0000_0000_0000;
 		endcase
 	end
 	
 	always @(op2) begin
 		case(op2)
-		r1: Ryinout = 'b0001;
-		r2: Ryinout = 'b0010;
-		r3: Ryinout = 'b0100;
-		r4: Ryinout = 'b1000;
-		default: Ryinout = 'b0000;
+		r0:  Ryinout = 'b0000_0000_0000_0001;
+		r1:  Ryinout = 'b0000_0000_0000_0010;
+		r2:  Ryinout = 'b0000_0000_0000_0100;
+		r3:  Ryinout = 'b0000_0000_0000_1000;
+		r4:  Ryinout = 'b0000_0000_0001_0000;
+		r5:  Ryinout = 'b0000_0000_0010_0000;
+		r6:  Ryinout = 'b0000_0000_0100_0000;
+		r7:  Ryinout = 'b0000_0000_1000_0000;
+		r8:  Ryinout = 'b0000_0001_0000_0000;
+		r9:  Ryinout = 'b0000_0010_0000_0000;
+		r10: Ryinout = 'b0000_0100_0000_0000;
+		r11: Ryinout = 'b0000_1000_0000_0000;
+		r12: Ryinout = 'b0001_0000_0000_0000;
+		r13: Ryinout = 'b0010_0000_0000_0000;
+		r14: Ryinout = 'b0100_0000_0000_0000;
+		r15: Ryinout = 'b1000_0000_0000_0000;
+		default: Ryinout = 'b0000_0000_0000_0000;
 		endcase
 	end
 	
 	always @(curr) begin
 		casex(curr)
 		`initial_state: begin 
-			Rin <= 'b0000;
-			Rout <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}};
+			Rout <= {num_of_reg{1'b0}}; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
@@ -144,8 +171,8 @@ module output_control_signal
 			end
 		
 		`Load1: begin 
-			Rin <= 'b0000;
-			Rout <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}};
+			Rout <= {num_of_reg{1'b0}}; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
@@ -156,7 +183,7 @@ module output_control_signal
 			
 		`Load2: begin 
 			Rin <= last_Rxinout;
-			Rout <= 'b0000;
+			Rout <= {num_of_reg{1'b0}};
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b0;
@@ -177,7 +204,7 @@ module output_control_signal
 			end
 		
 		`Add1: begin
-			Rin <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}}; 
 			Rout <= Rxinout; 
 			ALU_a_in <= 1'b1;
 			ALU_g_in <= 1'b0;
@@ -188,7 +215,7 @@ module output_control_signal
 			end
 		
 		`Add2: begin
-			Rin <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}}; 
 			Rout <= Ryinout; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b1;
@@ -200,7 +227,7 @@ module output_control_signal
 			
 		`Add3: begin
 			Rin <= Rxinout; 
-			Rout <= 'b0000; 
+			Rout <= {num_of_reg{1'b0}}; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b1;
@@ -210,7 +237,7 @@ module output_control_signal
 			end
 		
 		`Sub1: begin
-			Rin <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}}; 
 			Rout <= Rxinout; 
 			ALU_a_in <= 1'b1;
 			ALU_g_in <= 1'b0;
@@ -221,7 +248,7 @@ module output_control_signal
 			end
 		
 		`Sub2: begin
-			Rin <= 'b0000; 
+			Rin <= {num_of_reg{1'b0}}; 
 			Rout <= Ryinout; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b1;
@@ -233,7 +260,7 @@ module output_control_signal
 			
 		`Sub3: begin
 			Rin <= Rxinout; 
-			Rout <= 'b0000; 
+			Rout <= {num_of_reg{1'b0}}; 
 			ALU_a_in <= 1'b0;
 			ALU_g_in <= 1'b0;
 			ALU_g_out <= 1'b1;
@@ -248,10 +275,10 @@ endmodule
 
 
 module control_circuit
-	#(parameter num_of_reg = 4)
+	#(parameter num_of_reg = 16)
 	(input [`instruction_size + `operand_size - 1 : 0] INSTRUCTION,
 	 input clk, reset,
-	 output [num_of_reg:0] Rin, Rout,
+	 output [num_of_reg-1:0] Rin, Rout,
 	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, ALU_mode);
 	 
 	 wire [`instruction_size-1:0] instruction;
