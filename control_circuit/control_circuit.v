@@ -1,17 +1,21 @@
 // States
-`define initial_state 4'b0000
-`define Load1 4'b0001
-`define Move 4'b0010
-`define Add1 4'b0011
-`define Add2 4'b0100
-`define Add3 4'b0101
-`define Sub1 4'b0110
-`define Sub2 4'b0111
-`define Sub3 4'b1000
-`define Load2 4'b1001
-`define Xor1 4'b1010
-`define Xor2 4'b1011
-`define Xor3 4'b1100
+`define initial_state 5'b00000
+`define Load1 5'b00001
+`define Move 5'b00010
+`define Add1 5'b00011
+`define Add2 5'b00100
+`define Add3 5'b00101
+`define Sub1 5'b00110
+`define Sub2 5'b00111
+`define Sub3 5'b01000
+`define Load2 5'b01001
+`define Xor1 5'b01010
+`define Xor2 5'b01011
+`define Xor3 5'b01100
+`define ldPM1 5'b01101
+`define ldPM2 5'b01110
+`define Ldpc 5'b01111
+`define Branch 5'b10000
 
 // instructions
 `define load 3'b000
@@ -19,12 +23,17 @@
 `define add 3'b010
 `define sub 3'b011
 `define Xor 3'b100
+`define ldPM 3'b101
+`define ldpc 3'b110
+`define branch 3'b111
 
 //size
+`define INSTRUCTION_SIZE 16
 `define instruction_size 3
-`define state_size 4
-`define operand_size 8
+`define state_size 5
+`define operand_size 13
 `define ALU_mode_size 2
+`define mem_addr_size 8
 
 module Next_state(instruction, curr, next);
 	input [`instruction_size-1:0] instruction;
@@ -60,6 +69,19 @@ module Next_state(instruction, curr, next);
 		{`Xor1, {`instruction_size{1'b?}}}: next = `Xor2;
 		{`Xor2, {`instruction_size{1'b?}}}: next = `Xor3;
 		{`Xor3, {`instruction_size{1'b?}}}: next = `initial_state;
+		
+		//ldPM
+		{`initial_state, `ldPM}: next = `ldPM1;
+		{`ldPM1, {`instruction_size{1'b?}}}: next = `ldPM2;
+		{`ldPM2, {`instruction_size{1'b?}}}: next = `initial_state;
+		
+		//ldpc
+		{`initial_state, `ldpc}: next = `Ldpc;
+		{`Ldpc, {`instruction_size{1'b?}}}: next = `initial_state;
+		
+		//branch
+		{`initial_state, `branch}: next = `Branch;
+		{`Branch, {`instruction_size{1'b?}}}: next = `initial_state;
 		default: next = `initial_state;
 		endcase
 	end
@@ -99,10 +121,12 @@ module output_control_signal
 	(input [`operand_size-1 : 0] operand,
 	 input [`state_size-1:0] curr,
 	 input [num_of_reg-1:0] last_Rxinout, last_Ryinout,
+	 input [`mem_addr_size-1:0] last_mem_addr,
 	 output reg [num_of_reg-1:0] Rin, Rout,
 	 output reg [`ALU_mode_size-1:0] ALU_mode,
-	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load,
-	 output reg [num_of_reg-1:0] Rxinout, Ryinout);
+	 output reg ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, PC_in, PC_out, RAM_wren,
+	 output reg [num_of_reg-1:0] Rxinout, Ryinout,
+	 output reg [`mem_addr_size-1:0] mem_addr);
 	/* 
 	Number of registers: 16
 	Number of bits to encode registers: 4
@@ -118,11 +142,14 @@ module output_control_signal
 				  r8 = 'b1000,  r9 = 'b1001,  r10 = 'b1010, r11 = 'b1011,
 				  r12 = 'b1100, r13 = 'b1101, r14 = 'b1110, r15 = 'b1111;
 				  
-	wire [reg_encoding_bits-1:0] op1, op2;
-	
+	wire [reg_encoding_bits-1:0] op1, op2, op3;
+	reg [num_of_reg-1:0] Rzinout;
+	wire [`mem_addr_size-1:0] curr_mem_addr;
 	
 	assign op1 = operand[`operand_size-1:`operand_size - reg_encoding_bits];
 	assign op2 = operand[`operand_size - reg_encoding_bits - 1 : `operand_size - 2*reg_encoding_bits];
+	assign op3 = operand[`operand_size - 2*reg_encoding_bits - 1 : `operand_size - 3*reg_encoding_bits];
+	assign curr_mem_addr = {op1, op2};
 	
 	always @(op1) begin
 		case(op1)
@@ -168,6 +195,28 @@ module output_control_signal
 		endcase
 	end
 	
+	always @(op3) begin
+		case(op3)
+		r0:  Rzinout = 'b0000_0000_0000_0001;
+		r1:  Rzinout = 'b0000_0000_0000_0010;
+		r2:  Rzinout = 'b0000_0000_0000_0100;
+		r3:  Rzinout = 'b0000_0000_0000_1000;
+		r4:  Rzinout = 'b0000_0000_0001_0000;
+		r5:  Rzinout = 'b0000_0000_0010_0000;
+		r6:  Rzinout = 'b0000_0000_0100_0000;
+		r7:  Rzinout = 'b0000_0000_1000_0000;
+		r8:  Rzinout = 'b0000_0001_0000_0000;
+		r9:  Rzinout = 'b0000_0010_0000_0000;
+		r10: Rzinout = 'b0000_0100_0000_0000;
+		r11: Rzinout = 'b0000_1000_0000_0000;
+		r12: Rzinout = 'b0001_0000_0000_0000;
+		r13: Rzinout = 'b0010_0000_0000_0000;
+		r14: Rzinout = 'b0100_0000_0000_0000;
+		r15: Rzinout = 'b1000_0000_0000_0000;
+		default: Rzinout = 'b0000_0000_0000_0000;
+		endcase
+	end
+	
 	always @(curr) begin
 		casex(curr)
 		`initial_state: begin 
@@ -179,6 +228,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Load1: begin 
@@ -190,6 +243,10 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 			
 		`Load2: begin 
@@ -201,6 +258,10 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b1;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 			
 		`Move: begin
@@ -212,6 +273,10 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Add1: begin
@@ -223,6 +288,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Add2: begin
@@ -234,6 +303,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'b00; // add
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 			
 		`Add3: begin
@@ -245,6 +318,10 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Sub1: begin
@@ -256,6 +333,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Sub2: begin
@@ -267,6 +348,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'b01; // sub
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 			
 		`Sub3: begin
@@ -278,6 +363,10 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Xor1: begin
@@ -289,6 +378,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		
 		`Xor2: begin
@@ -300,6 +393,10 @@ module output_control_signal
 			Done <= 1'b0;
 			External_load <= 1'b0;
 			ALU_mode <= 2'b10; // xor
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 			
 		`Xor3: begin
@@ -311,6 +408,70 @@ module output_control_signal
 			Done <= 1'b1;
 			External_load <= 1'b0;
 			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
+			end
+		
+		`ldPM1: begin 
+			Rin <= {num_of_reg{1'b0}};
+			Rout <= {num_of_reg{1'b0}}; 
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b1;
+			External_load <= 1'b0;
+			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= curr_mem_addr;
+			end
+			
+		`ldPM2: begin 
+			Rin <= {num_of_reg{1'b0}};
+			Rout <= {num_of_reg{1'b0}};
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b1;
+			External_load <= 1'b1;
+			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b1;
+			mem_addr <= last_mem_addr;
+			end
+		
+		`Ldpc: begin
+			Rin <= Rxinout; 
+			Rout <= {num_of_reg{1'b0}};
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b1;
+			External_load <= 1'b0;
+			ALU_mode <= 2'bxx;
+			PC_in <= 1'b0;
+			PC_out <= 1'b1;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
+			end
+		
+		`Branch: begin
+			Rin <= {num_of_reg{1'b0}}; 
+			Rout <= Rxinout;
+			ALU_a_in <= 1'b0;
+			ALU_g_in <= 1'b0;
+			ALU_g_out <= 1'b0;
+			Done <= 1'b1;
+			External_load <= 1'b0;
+			ALU_mode <= 2'bxx;
+			PC_in <= 1'b1;
+			PC_out <= 1'b0;
+			RAM_wren <= 1'b0;
+			mem_addr <= {`mem_addr_size{1'bx}};
 			end
 		endcase
 	end
@@ -319,20 +480,22 @@ endmodule
 
 module control_circuit
 	#(parameter num_of_reg = 16)
-	(input [`instruction_size + `operand_size - 1 : 0] INSTRUCTION,
+	(input [`INSTRUCTION_SIZE - 1 : 0] INSTRUCTION,
 	 input clk, reset,
 	 output [num_of_reg-1:0] Rin, Rout,
 	 output [`ALU_mode_size-1:0] ALU_mode,
-	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load);
+	 output ALU_a_in, ALU_g_in, ALU_g_out, Done, External_load, PC_in, PC_out, RAM_wren,
+	 output [`mem_addr_size-1:0] RAM_addr);
 	 
 	 wire [`instruction_size-1:0] instruction;
 	 wire [`operand_size-1:0] operand;
 	 wire [`state_size-1:0] current_state, next_state;
 	 wire [num_of_reg-1:0] curr_Rxinout, curr_Ryinout, last_Rxinout, last_Ryinout;
+	 wire [`mem_addr_size-1:0] last_mem_addr_wire;
 	 
 	 
-	 assign instruction = INSTRUCTION[`instruction_size + `operand_size - 1 : `operand_size];
-	 assign operand = INSTRUCTION[`operand_size - 1 : 0];
+	 assign instruction = INSTRUCTION[`INSTRUCTION_SIZE - 1 : `INSTRUCTION_SIZE - `instruction_size];
+	 assign operand = INSTRUCTION[`INSTRUCTION_SIZE - `instruction_size - 1 : 0];
 	 
 	 Next_state NS(instruction, current_state, next_state);
 	 
@@ -340,6 +503,7 @@ module control_circuit
 	 
 	 last_state_output_register #(.num_of_reg(num_of_reg)) Last_Rxinout(curr_Rxinout, clk, reset, last_Rxinout);
 	 last_state_output_register #(.num_of_reg(num_of_reg)) Last_Ryinout(curr_Ryinout, clk, reset, last_Ryinout);
+	 last_state_output_register #(.num_of_reg(`mem_addr_size)) Last_RAM_addr(RAM_addr, clk, reset, last_mem_addr_wire);
 	 
 	 output_control_signal #(.num_of_reg(num_of_reg)) OUT
 		(.operand(operand),
@@ -352,5 +516,7 @@ module control_circuit
 		 .Done(Done),
 		 .External_load(External_load),
 		 .ALU_mode(ALU_mode),
-		 .Rxinout(curr_Rxinout), .Ryinout(curr_Ryinout));
+		 .Rxinout(curr_Rxinout), .Ryinout(curr_Ryinout),
+		 .PC_in(PC_in), .PC_out(PC_out), .RAM_wren(RAM_wren),
+		 .last_mem_addr(last_mem_addr_wire), .mem_addr(RAM_addr));
 endmodule

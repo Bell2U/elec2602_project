@@ -2,7 +2,7 @@
 
 
 module genral_purpose_reg(D, clk, enable, Q);
-	parameter D_width = 8 ;
+	parameter D_width = 16 ;
 	input [D_width-1:0] D;
 	input clk, enable;
 	output reg [D_width-1:0] Q;
