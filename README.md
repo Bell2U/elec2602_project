@@ -1,10 +1,4 @@
-# To Do List 兄弟萌干活了！！
-（不太会用md文件，撮合着看吧）  
-记得把你们的GitHub的用户名发给我，我给你们打开编辑的权限  
-所有的任务都列在这里，如果你完成了一项任务，请更新此文件 （i.e. 在完成的任务的地方加上关于你所做的工作的简洁的**英文**介绍，
-目的是为了让别人可以看懂并调用你做的东西，同时你写的介绍也可用在这个project的documentation中）  
-
-如果还有什么漏掉的内容的话请来补充
+# Simple processor design
 
 ## control circuit
 ### FSM diagram
@@ -47,7 +41,7 @@ Tri-state Vector
 ![Tri-state Vector](tristate_buffer.jpg)
 ### I/O explaination
 
-## memory (下节课之前不需要完成这个，先把前边的做了)
+## memory
 ### block diagram
 Overall
 ![memory_overall](program_memory/program_overall.jpg)
